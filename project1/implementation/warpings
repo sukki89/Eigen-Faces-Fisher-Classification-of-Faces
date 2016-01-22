@@ -1,0 +1,82 @@
+% Read all the warpings
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:150
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+3,1))(1,1){1});
+ x = x(2:88,:);
+ a = reshape(x,87*2,1);
+ warpings(1:174,i) = a;
+end
+
+%Calculate mean
+[rows,cols] = size(warpings);
+for i=1:174
+mean(i) = sum(warpings(i,:)/cols);
+end
+mean = mean';
+
+%Create caricature
+for i=1:cols
+caricature_real(:,i) =  warpings(:,i) - mean(:,1);
+end
+
+%SVD
+[u,l,v] = svd(caricature_real* caricature_real'); % since it is small
+real_eigen_warpings = u;
+for i=1:150
+  real_eigen_warpings(:,i) =  real_eigen_warpings(:,i)/norm( real_eigen_warpings(:,i));
+end
+
+%display top5 eigen warpings
+top5 = real_eigen_warpings(:,1:5);
+for i=1:5
+   warp_face = top5(:,i) + mean(:,1);
+   subplot(3,2,i);
+   %hold all;
+   scatter(255-warp_face(1:87,1),255-warp_face(88:174,1));
+end
+
+
+
+% reading test files
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:27
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+153,1))(1,1){1});
+ x = x(2:88,:);
+ a = reshape(x,87*2,1);
+ test_warpings(1:174,i) = a;
+end
+
+%Create caricature of test images
+for i=1:27
+caricature_test(:,i) =  test_warpings(:,i) - mean(:,1);
+end
+
+%reconstruct 
+weights = top5' * caricature_test;
+for i = 1:27
+  reconstructed_image(:,i) = mean;
+  for j=1:5
+    reconstructed_image(:,i) = reconstructed_image(:,i) + weights(j,i) * top5(:,j);
+  end
+end
+
+%plot for real and constructed
+subplot(1,2,1);
+scatter(test_warpings(1:87,1),test_warpings(88:174,1));
+subplot(1,2,2);
+scatter(255-reconstructed_image(1:87,1),255-reconstructed_image(88:174,1));
+
+%error
+weights = real_eigen_warpings' * caricature_test;
+for k=1:150
+  for i = 1:27
+    reconstructed_image(:,i) = mean;
+    for j=1:k
+     reconstructed_image(:,i) = reconstructed_image(:,i) + weights(j,i) * real_eigen_warpings(:,j);
+    end
+    calc_error = (reshape(test_warpings(:,i),87,2) - reshape(reconstructed_image(:,i),87,2)).^2;
+    squared_error = sum(calc_error,2);
+    total_error = sum(sqrt(squared_error))/87;
+  end
+  error_array(k) = total_error/27;
+end

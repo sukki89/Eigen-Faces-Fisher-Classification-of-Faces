@@ -1,0 +1,5 @@
+%error calculation
+
+[u,l,v] = svds(replacement);
+all150 = double(caricature_real) * u;
+

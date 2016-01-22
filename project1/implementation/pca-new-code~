@@ -1,0 +1,77 @@
+% Read all the images
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:150
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+3,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ image_matrix_real(:,i) = a;
+end
+
+%Calculate mean
+[rows,cols] = size(image_matrix_real);
+for i=1:65536
+mean(i) = round(sum(image_matrix_real(i,:)/cols));
+end
+mean = mean';
+
+vector_image = @(vec) reshape(unit8(min(max(Vec,0),255),row,col);
+mean_image = reshape(mean,256,256);
+imshow(mean_image);
+
+%Create caricature
+for i=1:cols
+caricature_real(:,i) =  image_matrix_real(:,i) - mean;
+end
+
+%calculate covariance
+covariance = cov(caricature_real);
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement = double(caricature_real') * double(caricature_real);
+[u,l,v] = svds(replacement,20);
+top20 = double(caricature_real) * u;
+for i=1:20
+subplot(4,5,i);
+imshow(uint8(reshape(top20(:,i),256,256)));
+axis tight;
+axis off;
+end
+
+
+%or try to find the top 20 manually - 
+%conclusion being the same top 20 faces are displayed u is taken as the eigen vector or v.
+replacement = double(caricature_real') * double(caricature_real);
+[u,l,v] = svd(replacement);
+[u1,l1,v1] = svd(replacement);
+real_eigen_vector = double(caricature_real)*u;
+for i=1:20
+maximum = l1(i,i);
+for j=1:150
+if l(j,j) == maximum 
+k = j;
+end
+end
+eigenface(:,i) = real_eigen_vector(:,k) ;
+end
+for i=1:20
+subplot(4,5,i);
+imshow(reshape(eigenface(:,i),256,256));
+axis tight;
+axis off;
+end
+
+%read the test data
+for i=1:27
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+150,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ test_matrix(:,i) = a;
+end
+
+%calculate the test caricature
+[rows,cols] = size(test_matrix);
+for i=1:cols
+caricature_test(:,i) =  test_matrix(:,i) - mean;
+end
+
+%calculate the weights
+eigenface(:,1)' * caricature_test(:,1)
+

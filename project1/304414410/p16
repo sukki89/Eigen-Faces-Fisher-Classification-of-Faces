@@ -1,0 +1,137 @@
+% Read all the landmarks
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_landmark_87/');
+for i=1:74
+ x = load(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_landmark_87/',filelist(i+3,1))(1,1){1});
+ b = reshape(x,87*2,1);
+ landmarks(:,i) = b;
+ female_landmarks(:,i) = b;
+end
+
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_landmark_87/');
+for i=1:78
+ x = load(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_landmark_87/',filelist(i+3,1))(1,1){1});
+ b = reshape(x,87*2,1);
+ landmarks(:,i+74) = b;
+ male_landmarks(:,i) = b;
+end
+
+%Calculate mean
+[rows_f,cols_f] = size(female_landmarks);
+[rows_m,cols_m] = size(male_landmarks);
+for i=1:174
+female_mean_landmarks(i) = (sum(female_landmarks(i,:)/cols_f));
+male_mean_landmarks(i) = (sum(male_landmarks(i,:)/cols_m));
+end
+female_mean_landmarks = female_mean_landmarks';
+male_mean_landmarks = male_mean_landmarks';
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement2 = double(landmarks') * double(landmarks);
+[u2,l2,v2] = svd(replacement2);
+[rows,cols] = size(u2);
+ce2 = double(landmarks) * u2;
+for i=1:cols
+  eigen_landmarks(:,i) =  u2(:,i) /norm( u2(:,i));
+  a2(:,i) =  (ce2(:,i)/norm(ce2(:,i))) .*sqrt(l2(i,i));
+end
+
+%Compute something #5
+y2 = a2' * (female_mean_landmarks - male_mean_landmarks);
+
+%Compute something #6
+z2 = inv(l2*l2*eigen_landmarks') * y2;
+
+%Compute something #7
+w2 = double(landmarks)*z2;
+
+% Read all the images
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_face/');
+for i=1:74
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_face/',filelist(i+3,1))(1,1){1});
+ b = reshape(x,256*256,1);
+ image(:,i) = b;
+ female_image(:,i) = b;
+end
+
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_face/');
+for i=1:78
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_face/',filelist(i+3,1))(1,1){1});
+ b = reshape(x,256*256,1);
+ image(:,i+74) = b;
+ male_image(:,i) = b;
+end
+
+%Calculate mean
+[rows_f,cols_f] = size(female_image);
+[rows_m,cols_m] = size(male_image);
+for i=1:65536
+female_mean(i) = (sum(female_image(i,:)/cols_f));
+male_mean(i) = (sum(male_image(i,:)/cols_m));
+end
+female_mean = female_mean';
+male_mean = male_mean';
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement = double(image') * double(image);
+[u,l,v] = svd(replacement);
+[rows,cols] = size(u);
+ce = double(image) * u;
+for i=1:cols
+  eigen_vectors(:,i) =  u(:,i) /norm( u(:,i));
+  a(:,i) =  (ce(:,i)/norm(ce(:,i))) .*sqrt(l(i,i));
+end
+
+%Compute something #5
+y = a' * (female_mean - male_mean);
+
+%Compute something #6
+z = inv(l*l*eigen_vectors') * y;
+
+%Compute something #7
+w = double(image)*z;
+
+
+% Read all the test landmarks
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_landmark_87_test/');
+for i=1:10
+ x = load(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_landmark_87_test/',filelist(i+2,1))(1,1){1});
+ b = reshape(x,87*2,1);
+ female_landmark_test(:,i) = b;
+end
+
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_landmark_87_test/');
+for i=1:10
+ x = load(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_landmark_87_test/',filelist(i+2,1))(1,1){1});
+ b = reshape(x,87*2,1);
+ male_landmark_test(:,i) = b;
+end
+
+% Read all the test images
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_face_test/');
+for i=1:10
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/female_face_test/',filelist(i+2,1))(1,1){1});
+ b = reshape(x,256*256,1);
+ female_image_test(:,i) = b;
+end
+
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_face_test/');
+for i=1:10
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/male_face_test/',filelist(i+2,1))(1,1){1});
+ b = reshape(x,256*256,1);
+ male_image_test(:,i) = b;
+end
+
+%Project test landmarks to w2 and test images to w
+for i=1:10
+  x1(i) = w'* double(female_image_test(:,i));
+  y1(i) = w2' * double(female_landmark_test(:,i));
+end
+
+for i=1:10
+  x2(i) = w'* double(male_image_test(:,i));
+  y2(i) = w2' * double(male_landmark_test(:,i));
+end
+
+scatter(x1,y1);
+hold all;
+scatter(x2,y2,"filled");

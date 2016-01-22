@@ -1,0 +1,81 @@
+%column wise
+% Read all the images
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:150
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+3,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ image_matrix_real(:,i) = a;
+ end
+
+%Calculate mean
+[rows,cols] = size(image_matrix_real);
+for i=1:65536
+mean(i) = round(sum(image_matrix_real(i,:)/cols));
+end
+mean = mean';
+im = reshape(mean,256,256);
+im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+imshow(im);
+
+%Create caricature
+for i=1:cols	
+caricature_real(:,i) =  image_matrix_real(:,i) - mean(:,1);
+end
+
+%calculate covariance
+%covariance = cov(caricature_real);
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement = double(caricature_real') * double(caricature_real);
+[u,l,v] = svds(replacement,20);
+top20 = double(caricature_real) * u;
+for i=1:20
+  subplot(4,5,i);
+  im = reshape(top20(:,i),256,256);
+  im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+  imshow(im);
+end
+
+%or try to find the top 20 manually - 
+%conclusion being the same top 20 faces are displayed u is taken as the eigen vector or v.
+replacement = double(caricature_real') * double(caricature_real);
+[u,l,v] = svd(replacement);
+real_eigen_vectors = double(caricature_real) * u;
+for i=1:150
+  real_eigen_vectors(:,i) =  real_eigen_vectors(:,i)/norm( real_eigen_vectors(:,i));
+end
+
+%read the test data
+for i=1:27
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+152,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ test_matrix(:,i) = a;
+end
+
+%calculate the test caricature
+[rows,cols] = size(test_matrix);
+for i=1:cols
+caricature_test(:,i) =  test_matrix(:,i) - mean(:,1);
+end
+
+%calculate the weights
+weights = real_eigen_vectors' * double(caricature_test);
+%inverse = ((real_eigen_vectors')-1);
+%Reconstruct test images for k=5
+for k=1:150
+  for i = 1:27
+    reconstructed_image(:,i) = mean;
+    for j=1:k
+     reconstructed_image(:,i) = reconstructed_image(:,i) + weights(j,i) * real_eigen_vectors(:,j);
+%      reconstructed_image(:,i) = reconstructed_image(:,i) + inverse(:,j) .* weights(j,i) ;
+    end
+  end
+
+  calc_error = test_matrix - reconstructed_image;
+  total_error = 0;
+  %for i=1:27
+   %total_error += double(calc_error(:,i)')*double(calc_error(:,i));
+   total_error = sum(sum(double(calc_error).^2))/(256*256*27);
+   % end
+  error_array(k) = total_error;
+end

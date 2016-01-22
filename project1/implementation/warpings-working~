@@ -1,0 +1,39 @@
+% Read all the warpings
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:150
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+3,1))(1,1){1});
+ x = 255- x(2:88,:);
+ a = reshape(x,87*2,1);
+ warpings(1:174,i) = a;
+end
+
+%Calculate mean
+[rows,cols] = size(warpings);
+for i=1:174
+mean(i) = round(sum(warpings(i,:)/cols));
+end
+mean = mean';
+
+
+%Create caricature
+for i=1:cols
+caricature_real(:,i) =  warpings(:,i) - mean(:,1);
+end
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement = double(caricature_real') * double(caricature_real);
+[u,l] = eig(replacement);
+top5 = double(caricature_real) * u;
+
+[a,b] = sort(-diag(l));
+top5 = top5(:,b);
+
+
+
+for i=1:20
+subplot(4,5,i);
+imshow(uint8(reshape(top20(:,i),256,256)));
+axis tight;
+axis off;
+end
+

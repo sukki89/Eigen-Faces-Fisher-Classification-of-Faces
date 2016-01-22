@@ -1,0 +1,54 @@
+% Read all the images
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:150
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+3,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ image_matrix_real(:,i) = a;
+end
+
+%Calculate mean
+[rows,cols] = size(image_matrix_real);
+for i=1:65536
+mean(i) = round(sum(image_matrix_real(i,:)/cols));
+end
+mean = mean';
+
+vector_image = @(vec) reshape(unit8(min(max(Vec,0),255),row,col);
+mean_image = reshape(mean,256,256);
+imshow(mean_image);
+
+%Create caricature
+for i=1:cols
+caricature_real(:,i) =  image_matrix_real(:,i) - mean;
+end
+
+%calculate covariance
+covariance = cov(caricature_real);
+
+% or use kahune-louve method to calculate the eigen vectors = caricature'*caricature, calculate the eigen vectors v,l
+replacement = double(caricature_real') * double(caricature_real);
+[u,l,v] = svds(replacement,20);
+top20 = double(caricature_real) * u;
+for i=1:20
+subplot(4,5,i);
+imshow(uint8(reshape(top20(:,i),256,256)));
+axis tight;
+axis off;
+end
+
+%read the test data
+for i=1:27
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+150,1))(1,1){1});
+ a = reshape(x,256*256,1);
+ test_matrix(:,i) = a;
+end
+
+%calculate the test caricature
+[rows,cols] = size(test_matrix);
+for i=1:cols
+caricature_test(:,i) =  test_matrix(:,i) - mean;
+end
+
+%calculate the weights
+eigenface(:,1)' * caricature_test(:,1)
+

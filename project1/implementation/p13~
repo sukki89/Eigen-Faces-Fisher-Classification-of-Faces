@@ -1,0 +1,150 @@
+% Read all the training landmarks - 
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:150
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+3,1))(1,1){1});
+ x = x(2:88,:);
+ a = reshape(x,87*2,1);
+ landmarks_training(1:174,i) = a;
+end
+
+%Calculate mean of the landmarks - desired marks
+[rows,cols] = size(landmarks_training);
+for i=1:rows
+mean_training_landmarks(i) = sum(landmarks_training(i,:)/cols);
+end
+mean_training_landmarks = mean_training_landmarks';
+
+% Read all the training images and warp them using the warped-kent.m
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:150
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+3,1))(1,1){1});
+ warped_image = warpImage_kent(x, reshape(landmarks_training(:,1),87,2), reshape(mean_training_landmarks,87,2));
+ training_images(:,i) = reshape(x,256*256,1);
+ training_warped_images(:,i) = reshape(warped_image,256*256,1);
+end
+
+%PCA on warped training images
+%1. Calculate mean of warped training images
+%2. Caricature of warped training images
+%3. SVD using kahune-louve method
+
+%1. Calculate mean
+[rows,cols] = size(training_warped_images);
+for i=1:rows
+  training_warped_images_mean(i) = round(sum(training_warped_images(i,:)/cols));
+end
+training_warped_images_mean = training_warped_images_mean';
+im = reshape(training_warped_images_mean,256,256);
+im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+imshow(im);
+
+%2. Create caricature of warped training images
+for i=1:cols	
+  training_warpedimages_caricature(:,i) =  training_warped_images(:,i) - training_warped_images_mean(:,1);
+end
+
+%3. SVD
+replacement = double(training_warpedimages_caricature') * double(training_warpedimages_caricature);
+[u,l,v] = svd(replacement);
+warped_images_eigen_values = double(training_warpedimages_caricature) * u;
+
+
+% normalising warped eigen faces
+for i=1:150
+  warped_images_eigen_values(:,i) =  warped_images_eigen_values(:,i)/norm( warped_images_eigen_values(:,i));
+end
+
+%Reconstruction
+%1. Read the test landmarks 
+%2. Read the test images 
+%3. Warp them using the kent function - which mean to use? the training data mean
+%4. Find the caricature and weights
+%5. Reconstruct the test images using the warped eigen faces
+%6. Reconstruct the test landmarks using eigen landmarks
+%7. unWarp the reconstructed images with reconstrcuted landmarks. What is the desired marks is reconstructed landmarks and original landmarks is mean
+%8. Calculate the squared error btw original test image and final reconstructed warped image   
+
+% reading test landmarks
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:27
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+153,1))(1,1){1});
+ x = 255- x(2:88,:);
+ a = reshape(x,87*2,1);
+ test_landmarks(1:174,i) = a;
+end
+
+%read the test images and warp them
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:27
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+152,1))(1,1){1});
+ warped_image = warpImage_kent(x, reshape(test_landmarks(:,1),87,2), reshape(mean_training_landmarks,87,2));
+ test_images(:,i) = reshape(x,256*256,1);
+ test_warped_images(:,i) = reshape(warped_image,256*256,1);
+end
+
+%caricature of the warped test images
+for i=1:27
+testing_warpedimages_caricature(:,i) =  test_warped_images(:,i) - training_warped_images_mean(:,1);
+end
+
+%weights for apperance
+weights_apperance = warped_images_eigen_values' * double(testing_warpedimages_caricature);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%calculating the eigen landmarks
+
+%Create original landmarks caricature
+[rows,cols] = size(landmarks_training)
+for i=1:cols
+training_landmarks_caricature(:,i) =  landmarks_training(:,i) - mean_training_landmarks(:,1);
+end
+
+%SVD
+[u1,l1,v1] = svd(training_landmarks_caricature* training_landmarks_caricature'); % since it is small
+eigen_landmarks = u1;
+% normalising warped eigen landmarks
+for i=1:150
+  eigen_landmarks(:,i) =  eigen_landmarks(:,i)/norm( eigen_landmarks(:,i));
+end
+
+%Create the caricature of test landmarks
+for i=1:27
+testing_landmarks_caricature(:,i) =  test_landmarks(:,i) - mean_training_landmarks(:,1);
+end
+
+%weights for landmarks
+weights_landmarks = eigen_landmarks' * double(testing_landmarks_caricature);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Reconstruct the test warped images using eigen warped images
+for k=1:10
+  for i = 1:27
+    reconstructed_image(:,i) = training_warped_images_mean;
+    reconstructed_landmark(:,i) = mean_training_landmarks;
+    for j=1:k
+     reconstructed_image(:,i) = reconstructed_image(:,i) + weights_apperance(j,i) * warped_images_eigen_values(:,j);
+     reconstructed_landmark(:,i) = reconstructed_landmark(:,i) + weights_landmarks(j,i) * eigen_landmarks(:,j); 
+    end
+    x = warpImage_kent(reshape(reconstructed_image(:,i),256,256), reshape(mean_training_landmarks,87,2),reshape(reconstructed_landmark(:,i),87,2));
+    unwarped_image(:,i) = reshape(x,256*256,1);
+  end
+  error(k) = sum(sum((test_images - unwarped_image).^2))/(256*256*27);
+end
+
+for i=1:20
+  subplot(9,3,i);
+  imshow(uint8(reshape(reconstructed_image (:,i),256,256)));
+end
+%unwarp the reconstructed images
+%for i=1:27
+%  x = warpImage_kent(reshape(reconstructed_image(:,i),256,256), reshape(mean_training_landmarks,87,2),reshape(reconstructed_landmark(:,i),87,2));
+%  unwarped_image(:,i) = reshape(x,256*256,1);
+%end
+
+%%imshow(reshape(test_images (:,2),256,256));
+%subplot(2,1,2);
+%im = unwarped_image(:,2);
+%im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+%imshow(reshape(im,256,256),[]);
+
+

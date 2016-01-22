@@ -1,0 +1,114 @@
+% Read all the warpings - original warpings/marks
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:150
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+3,1))(1,1){1});
+ x = x(2:88,:);
+ a = reshape(x,87*2,1);
+ warpings_training(1:174,i) = a;
+end
+
+%Calculate mean of the warpings - desired warpings/marks
+[rows,cols] = size(warpings_training);
+for i=1:rows
+mean_training_warpings(i) = sum(warpings_training(i,:)/cols);
+end
+mean_training_warpings = mean';
+
+% Read all the training images and warp them using the warped-kent.m
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:150
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+3,1))(1,1){1});
+ warped_image = warpImage_kent(x, reshape(warpings(:,1),87,2), reshape(mean,87,2));
+ real_images(:,i) = reshape(x,256*256,1);
+ warped_images(:,i) = reshape(warped_image,256*256,1);
+end
+
+%PCA on warped images
+%1. Calculate mean
+%2. Caricature
+%3. SVD using kahune-louve method
+
+%1. Calculate mean
+[rows,cols] = size(warped_images);
+for i=1:rows
+mean_warped(i) = round(sum(warped_images(i,:)/cols));
+end
+mean_warped = mean_warped';
+im = reshape(mean_warped,256,256);
+im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+imshow(im);
+
+%2. Create caricature
+for i=1:cols	
+caricature(:,i) =  warped_images(:,i) - mean_warped(:,1);
+end
+
+%3. SVD
+replacement = double(caricature') * double(caricature);
+[u,l,v] = svd(replacement);
+warped_eigen_values = double(caricature) * u;
+for i=1:10
+  subplot(2,5,i);
+  im = reshape(warped_eigen_values(:,i),256,256);
+  im=(im-min(im(:)))/(max(im(:))-min(im(:)));
+  imshow(im);
+end
+
+%Reconstruction
+%1. Read the test landmarks 
+%2. Read the test images 
+%3. Warp them using the kent function - which mean to use? the test data mean or the training data mean?
+%4. Find the caricature and weights
+%5. Reconstruct the test images using the warped eigen faces
+%6. Reconstruct the test landmarks using eigen landmarks
+%7. Warp the reconstructed images with reconstrcuted landmarks. What is the desired marks or the mean?
+%8. Calculate the squared error btw original test image and final reconstructed warped image   
+
+% reading test landmarks
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/');
+for i=1:27
+ x = importdata(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/landmark_87/',filelist(i+153,1))(1,1){1});
+ x = x(2:88,:);
+ a = reshape(x,87*2,1);
+ test_warpings(1:174,i) = a;
+end
+
+%read the test data
+filelist = readdir('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/');
+for i=1:27
+ x = imread(strcat('/home/kami/Documents/FALL/pr-ml/project1/face_data/face/',filelist(i+152,1))(1,1){1});
+ warped_image = warpImage_kent(x, reshape(test_warpings(:,1),87,2), reshape(mean,87,2));
+ test_images(:,i) = reshape(x,256*256,1);
+ warped_test_images(:,i) = reshape(warped_image,256*256,1);
+end
+
+%caricature of the test warped images
+for i=1:27
+caricature_test_images(:,i) =  warped_test_images(:,i) - mean_warped(:,1);
+end
+
+%weights for apperance
+weights_apperance = warped_eigen_values' * double(caricature_test_images);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%calculating the eigen landmarks
+
+%Create original landmarks caricature
+for i=1:cols
+caricature_training_warpings(:,i) =  warpings(:,i) - mean(:,1);
+end
+
+%SVD
+[u,l,v] = svd(caricature_training_warpings* caricature_training_warpings'); % since it is small
+real_eigen_warpings = u;
+
+
+%Create test landmarks caricature
+for i=1:cols
+caricature_test_warpings(:,i) =  test_warpings(:,i) - mean(:,1);
+end
+
+%weights for warps
+weights_landmarks = real_eigen_warpings' * double(caricature_test_warpings);
+
+

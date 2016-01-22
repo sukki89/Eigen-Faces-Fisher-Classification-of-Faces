@@ -1,0 +1,16 @@
+for k=1:150
+  for i = 1:27
+    reconstructed_image(:,i) = mean_warped;
+    for j=1:k
+     reconstructed_image(:,i) = reconstructed_image(:,i) + weights(j,i) * warped_eigen_values(:,j);
+%      reconstructed_image(:,i) = reconstructed_image(:,i) + inverse(:,j) .* weights(j,i) ;
+    end
+  end
+  calc_error = test_matrix - reconstructed_image;
+  total_error = 0;
+  for i=1:27
+   total_error += double(calc_error(:,i)')*double(calc_error(:,i));
+  end
+  error_array(k) = total_error;
+end
+
